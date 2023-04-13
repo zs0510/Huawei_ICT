@@ -46,6 +46,7 @@ int get_eid_channel_id_ok(int nid0, int nid1, int channel_id);// 检查节点(�
 int get_channel_id_empty_max(vector<vector<int>>& path_edges);
 int add_edge(int nid0, int nid1);// 新增两个节点之间的边
 vector<vector<int>> get_path_edges_total_via_nodes(vector<int>& path_nodes);// 返回节点序列中所有可能的边
+void sort_operations();
 
 
 int main() {
@@ -103,9 +104,15 @@ int main() {
         });
     }
 
+    // 对业务进行排序
+    // 1. 把路径可选择的少的排前面
+    // 2. 把长度长的排在前面
+    sort_operations();
+
+
     // 处理
-    for (int op_id = 0; op_id < num_of_operations; ++op_id) {
-        auto& op = operations[op_id];
+    for (auto& op : operations) {
+//        auto& op = operations[op_id];
         int nid_source = op.nid0, nid_target = op.nid1;
 
         vector<int> path_nodes;// 这条路径通过的节点
@@ -407,4 +414,51 @@ vector<vector<int>> get_path_edges_total_via_nodes(vector<int>& path_nodes) {
 #endif
     }
     return path_edges_total;
+}
+
+void sort_operations() {
+    // 对业务进行排序
+    // 1. 把路径可选择的少的排前面
+    // 2. 把长度长的排在前面
+    vector<int> path_min(num_of_operations, INT_MAX), path_len(num_of_operations);
+
+    for (int op_id = 0; op_id < num_of_operations; ++op_id) {
+        vector<int> path_nodes;// 这条路径通过的节点
+        auto& op = operations[op_id];
+        int nid_source = op.nid0, nid_target = op.nid1;
+        if (paths_of_nodes[nid_source].count(nid_target)) {
+            path_nodes = paths_of_nodes[nid_source][nid_target];
+        } else {
+            // 初始化
+            // 使用广搜得到可以到达的路径(不区分通道是否被使用完)
+            path_nodes = bfs_find_path_nodes(nid_source, nid_target);
+            paths_of_nodes[nid_source][nid_target] = path_nodes;
+            auto tmp = path_nodes;
+            reverse(tmp.begin(), tmp.end());
+            paths_of_nodes[nid_target][nid_source] = tmp;
+        }
+        path_len[op_id] = path_nodes.size();
+        for (int i = 1; i < path_nodes.size(); ++i) {
+            int nid_prev = path_nodes[i - 1];
+            int nid_curr = path_nodes[i];
+            int cnt = 0;
+            for (auto& eid : nodes[nid_prev].eids) {
+                auto& edge = edges[eid];
+                int nid_neighbor = edge.nid0 + edge.nid1 - nid_prev;
+                if (nid_neighbor == nid_curr) {
+                    ++cnt;
+                }
+            }
+            path_min[op_id] = min(path_min[op_id], cnt);
+        }
+    }
+
+    sort(operations.begin(), operations.end(), [&](Operation& op0, Operation& op1) {
+        if (path_min[op0.id] != path_min[op1.id]) {
+            return path_min[op0.id] < path_min[op1.id];// 把路径可选项更小的放在前面
+        }
+        return path_len[op0.id] > path_len[op1.id];// 把路径长的业务放在前面
+    });
+
+
 }
