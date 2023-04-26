@@ -52,9 +52,17 @@ unordered_map<int, unordered_map<int, int>> dists_min;// 记录两个节点之�
 unordered_map<int, unordered_map<int, vector<int>>> paths_of_nodes;// 以节点序列记录两个节点之间的路径
 
 vector<int> bfs_find_path_nodes(int nid_source, int nid_target, int channel_id = -1, unordered_set<int> baned_nodes = {});// 返回源点与目标点之间的节点路径(channel_id 为 -1 时不考虑通道占用情况)
+void dfs_find_path_edges(const int& nid_target,
+                         int nid_current,
+                         vector<int>& channel_empty,
+                         vector<int>& path_edges,
+                         unordered_set<int>& visited,
+                         int& count_added_min,
+                         int& channel_id_min,
+                         vector<int>& path_edges_min);
 bool is_channel_id_ok(vector<vector<int>>& path_edges_total, int channel_id, vector<int>& path_edges);// 检查这些边的通道 pid 是否被占用
 int get_eid_channel_id_ok(int nid0, int nid1, int channel_id);// 检查节点(直接相连)之间能否通过这个通道进行连接
-int get_channel_id_empty_max(vector<vector<int>>& path_edges);
+pair<int, int> get_channel_id_empty_max(vector<vector<int>>& path_edges);
 int add_edge(int nid0, int nid1);// 新增两个节点之间的边
 vector<vector<int>> get_path_edges_total_via_nodes(vector<int>& path_nodes);// 返回节点序列中所有可能的边
 void sort_operations();
@@ -209,8 +217,32 @@ int main() {
             } else {
                 // solution 2: 无法通过现有边完成业务时, 新增边以满足要求
                 // TODO: 不简单地仅仅依赖初始遍历得到的节点序列, 选择一个加边更少的节点序列?
-                path_edges.clear();
-                path_channel_id = get_channel_id_empty_max(path_edges_total);// 统计每条边的通道使用情况, 选出需要增加边最少的一种情况来增加边
+//                path_edges.clear();
+//
+//                //  重新生成一个节点序列, 这个节点序列可以通过添加较少的边完成需求
+//                auto pair_tmp = get_channel_id_empty_max(path_edges_total);// 统计每条边的通道使用情况, 选出需要增加边最少的一种情况来增加边
+//                int channel_id_min = pair_tmp.first, count_added_min = pair_tmp.second;
+//
+//                unordered_set<int> visited_input;
+//                vector<int> channel_empty_input(num_of_channels, 0);
+//                vector<int> path_edges_input;
+//                vector<int> path_edges_output;
+//                dfs_find_path_edges(nid_target, nid_source, channel_empty_input, path_edges_input, visited_input,
+//                                    count_added_min, channel_id_min, path_edges_output);
+//
+//                if (!path_edges_output.empty()) {
+//                    // 更新节点序列
+//                    vector<int> path_nodes_new = { nid_source };
+//                    for (auto& eid : path_edges_output) {
+//                        auto& edge = edges[eid];
+//                        int nid_next = edge.nid0 + edge.nid1 - path_nodes_new.back();
+//                        path_nodes_new.push_back(nid_next);
+//                    }
+//                    path_nodes = path_nodes_new;
+//                }
+
+                path_edges_total = get_path_edges_total_via_nodes(path_nodes);
+                path_channel_id = get<0>(get_channel_id_empty_max(path_edges_total));// 统计每条边的通道使用情况, 选出需要增加边最少的一种情况来增加边
 
                 // 搜索一个局部连接序列, 这个序列可以在不添加新边的前提下连接 path_nodes[i - 1], path_nodes[i]
                 for (int i = 1; i < path_nodes.size(); ++i) {
@@ -402,7 +434,7 @@ int get_eid_channel_id_ok(int nid0, int nid1, int channel_id) {
     return res;
 }
 
-int get_channel_id_empty_max(vector<vector<int>>& path_edges) {
+pair<int, int> get_channel_id_empty_max(vector<vector<int>>& path_edges) {
 
     //  记录每个通道的空闲数目, 注意: 在一对节点之间, 一个 通道ID 只能被增加一次
     vector<int> counts_empty_channel(num_of_channels, 0), indices_channel(num_of_channels);
@@ -433,7 +465,7 @@ int get_channel_id_empty_max(vector<vector<int>>& path_edges) {
         return counts_empty_channel[a] > counts_empty_channel[b];
     });
 
-    return indices_channel.front();
+    return make_pair(indices_channel.front(), counts_empty_channel[indices_channel.front()]);
 
 }
 
@@ -534,12 +566,12 @@ void sort_operations() {
     }
 
     sort(operations.begin(), operations.end(), [&](Operation& op0, Operation& op1) {
-        if (path_min[op0.id] != path_min[op1.id]) {// 89211485
+        if (path_min[op0.id] != path_min[op1.id]) {
             return path_min[op0.id] < path_min[op1.id];// 把路径可选项更小的放在前面
         }
-//        if (path_multiplicative[op0.id] != path_multiplicative[op1.id]) {// 93585140
-//            return path_multiplicative[op0.id] < path_multiplicative[op1.id];
-//        }
+        if (path_multiplicative[op0.id] != path_multiplicative[op1.id]) {
+            return path_multiplicative[op0.id] < path_multiplicative[op1.id];
+        }
         return path_len[op0.id] > path_len[op1.id];// 把路径长的业务放在前面
     });
 
@@ -711,5 +743,67 @@ void optimization_transfer_operation() {
             eid = edge_indices[eid];
         }
     }
+
+}
+
+void dfs_find_path_edges(const int& nid_target,
+                         int nid_current,
+                         vector<int>& channel_empty,
+                         vector<int>& path_edges,
+                         unordered_set<int>& visited,
+                         int& count_added_min,
+                         int& channel_id_min,
+                         vector<int>& path_edges_min) {
+
+    //  计算当前连接情况下, 需要新增多少条边
+    int count_added = path_edges.size() + 1, channel_id = -1;
+    for (int cid = 0; cid < num_of_channels; ++cid) {
+        if ((int)(path_edges.size()) - channel_empty[cid] < count_added) {
+            count_added = (int)(path_edges.size()) - channel_empty[cid];
+            channel_id = cid;
+        }
+
+    }
+
+    if (count_added >= count_added_min) {
+        return;
+    }
+
+    if (nid_current == nid_target) {
+        count_added_min = count_added;
+        channel_id_min = channel_id;
+        path_edges_min = path_edges;
+        return;
+    }
+
+    auto& node_current = nodes[nid_current];
+    visited.insert(nid_current);
+
+    for (auto& eid : node_current.eids) {
+        auto& edge = edges[eid];
+        int nid_next = edge.nid0 + edge.nid1 - nid_current;
+        if (visited.count(nid_next)) continue;
+
+        for (int cid = 0; cid < num_of_channels; ++cid) {
+            if (edge.channel2operation[cid] == -1) {
+                ++channel_empty[cid];
+            }
+        }
+        path_edges.push_back(eid);
+
+        dfs_find_path_edges(nid_target, nid_current, channel_empty, path_edges, visited,
+                            count_added_min, channel_id_min, path_edges_min);
+
+        for (int cid = 0; cid < num_of_channels; ++cid) {
+            if (edge.channel2operation[cid] == -1) {
+                --channel_empty[cid];
+            }
+        }
+        path_edges.pop_back();
+
+    }
+
+    visited.erase(nid_current);
+
 
 }
