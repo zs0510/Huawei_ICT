@@ -19,7 +19,7 @@
 
 #ifndef _INT32_T
 #define _INT32_T
-typedef int                     int32_t;
+typedef int int32_t;
 #endif /* _INT32_T */
 
 #ifndef _UINT32_T
@@ -29,7 +29,7 @@ typedef unsigned int uint32_t;
 
 #ifndef _INT64_T
 #define _INT64_T
-typedef long long               int64_t;
+typedef long long int64_t;
 #endif /* _INT64_T */
 
 #ifndef _UINT64_T
@@ -38,63 +38,63 @@ typedef unsigned long long uint64_t;
 #endif /* _UINT64_T */
 
 // TEST_HDU01 确定是否输出调试信息, 提交时请注释下行代码!
-#define TEST_HDU01 1
+#define TEST_HDU01
 
 using namespace std;
 
 /****************************************************以下是基本变量定义******************************************************/ 
 static const int INF = 1e9 + 7;              // 取一个极大的质数, 便于取模
-static const double process_time_max = 3.0;  // 设定程序运行的最长时间(秒)
+static const double process_time_max = 6.0;  // 设定程序运行的最长时间(秒)
 
-class ChannelState {
+class ChannelStatue {                        // 自定义128位的数字用于表示通道使用情况, 位为1表示空闲, 位为0表示在用
 public:
-    ChannelState() : high(0), low(0){}
-    ChannelState(int32_t l) : high(-(l < 0)), low(l) {}
-    ChannelState(int64_t l) : high(-(l < 0)), low(l) {}
-    ChannelState(uint32_t l) : high(0), low(l) {}
-    ChannelState(uint64_t l) : high(0), low(l) {}
-    ChannelState(uint64_t h, uint64_t l) : high(h), low(l) {}
+    ChannelStatue() : high(0), low(0){}
+    ChannelStatue(int32_t l) : high(-(l < 0)), low(l) {}
+    ChannelStatue(int64_t l) : high(-(l < 0)), low(l) {}
+    ChannelStatue(uint32_t l) : high(0), low(l) {}
+    ChannelStatue(uint64_t l) : high(0), low(l) {}
+    ChannelStatue(uint64_t h, uint64_t l) : high(h), low(l) {}
 
-    bool     operator == (const ChannelState& o)const { return high == o.high && low == o.low; }
-    bool     operator != (const ChannelState& o)const { return high != o.high || low != o.low; }
-    bool     operator < (const ChannelState& o)const { return (high == o.high) ? low < o.low : high < o.high; }
-    bool     operator < (const int64_t& o)const { return *this < ChannelState(o); }
+    bool     operator == (const ChannelStatue& rhs)const { return high == rhs.high && low == rhs.low; }
+    bool     operator != (const ChannelStatue& rhs)const { return high != rhs.high || low != rhs.low; }
+    bool     operator < (const ChannelStatue& rhs)const { return (high == rhs.high) ? low < rhs.low : high < rhs.high; }
+    bool     operator < (const int64_t& rhs)const { return *this < ChannelStatue(rhs); }
     bool     operator !()const                    { return !(high != 0 || low != 0); }
-    ChannelState  operator -()const                    { return ++ChannelState(~high, ~low); }
-    ChannelState  operator ~()const                    { return ChannelState(~high, ~low); }
+    ChannelStatue  operator -()const                    { return ++ChannelStatue(~high, ~low); }
+    ChannelStatue  operator ~()const                    { return ChannelStatue(~high, ~low); }
 
-    ChannelState& operator++()    { high += (++low == 0); return *this; }
-    ChannelState& operator--()    { high -= (low-- == 0); return *this; }
-    ChannelState  operator++(int) { auto tmp = *this; ++(*this); return tmp; }
-    ChannelState  operator--(int) { auto tmp = *this; --(*this); return tmp; }
+    ChannelStatue& operator++()    { high += (++low == 0); return *this; }
+    ChannelStatue& operator--()    { high -= (low-- == 0); return *this; }
+    ChannelStatue  operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+    ChannelStatue  operator--(int) { auto tmp = *this; --(*this); return tmp; }
 
-    ChannelState& operator |= (const ChannelState& u) { high |= u.high; low |= u.low; return *this; }
-    ChannelState& operator &= (const ChannelState& u) { high &= u.high; low &= u.low; return *this; }
-    ChannelState& operator ^= (const ChannelState& u) { high ^= u.high; low ^= u.low; return *this; }
+    ChannelStatue& operator |= (const ChannelStatue& rhs) { high |= rhs.high; low |= rhs.low; return *this; }
+    ChannelStatue& operator &= (const ChannelStatue& rhs) { high &= rhs.high; low &= rhs.low; return *this; }
+    ChannelStatue& operator ^= (const ChannelStatue& rhs) { high ^= rhs.high; low ^= rhs.low; return *this; }
 
-    ChannelState& operator += (const ChannelState& u) { const uint64_t old = low; low += u.low;  high += u.high + (low < old); return *this; }
-    ChannelState& operator -= (const ChannelState& u) { return *this += -u; }
+    ChannelStatue& operator += (const ChannelStatue& rhs) { const uint64_t old = low; low += rhs.low;  high += rhs.high + (low < old); return *this; }
+    ChannelStatue& operator -= (const ChannelStatue& rhs) { return *this += -rhs; }
 
-    friend ChannelState operator + (const ChannelState& l, const ChannelState& r)   { return ChannelState(l) += r; }
-    friend ChannelState operator + (const ChannelState& l, const uint64_t& r)   { return ChannelState(l) += ChannelState(r); }
-    friend ChannelState operator + (const ChannelState& l, const uint32_t& r)   { return ChannelState(l) += ChannelState(r); }
-    friend ChannelState operator + (const ChannelState& l, const int32_t& r)   { return ChannelState(l) += ChannelState(r); }
-    friend ChannelState operator + (const uint64_t& l, const ChannelState& r)   { return ChannelState(l) += r; }
-    friend ChannelState operator - (const ChannelState& l, const ChannelState& r)   { return ChannelState(l) -= r; }
-    friend ChannelState operator | (const ChannelState& l, const ChannelState& r)   { return ChannelState(l) = (r); }
-    friend ChannelState operator & (const ChannelState& l, const ChannelState& r)   { return ChannelState(l) &= r; }
-    friend ChannelState operator & (const ChannelState& l, const uint64_t& r)   { return ChannelState(l) &= ChannelState(r); }
-    friend ChannelState operator ^ (const ChannelState& l, const ChannelState& r)   { return ChannelState(l) ^= r; }
-    friend bool    operator >  (const ChannelState& l, const ChannelState& r)  { return r < l; }
-    friend bool    operator >  (const ChannelState& l, const int64_t& r)  { return ChannelState(r) < l; }
-    friend bool    operator >  (const int64_t& l, const ChannelState& r)  { return r < ChannelState(l); }
+    friend ChannelStatue operator + (const ChannelStatue& l, const ChannelStatue& r)   { return ChannelStatue(l) += r; }
+    friend ChannelStatue operator + (const ChannelStatue& l, const uint64_t& r)   { return ChannelStatue(l) += ChannelStatue(r); }
+    friend ChannelStatue operator + (const ChannelStatue& l, const uint32_t& r)   { return ChannelStatue(l) += ChannelStatue(r); }
+    friend ChannelStatue operator + (const ChannelStatue& l, const int32_t& r)   { return ChannelStatue(l) += ChannelStatue(r); }
+    friend ChannelStatue operator + (const uint64_t& l, const ChannelStatue& r)   { return ChannelStatue(l) += r; }
+    friend ChannelStatue operator - (const ChannelStatue& l, const ChannelStatue& r)   { return ChannelStatue(l) -= r; }
+    friend ChannelStatue operator | (const ChannelStatue& l, const ChannelStatue& r)   { return ChannelStatue(l) = (r); }
+    friend ChannelStatue operator & (const ChannelStatue& l, const ChannelStatue& r)   { return ChannelStatue(l) &= r; }
+    friend ChannelStatue operator & (const ChannelStatue& l, const uint64_t& r)   { return ChannelStatue(l) &= ChannelStatue(r); }
+    friend ChannelStatue operator ^ (const ChannelStatue& l, const ChannelStatue& r)   { return ChannelStatue(l) ^= r; }
+    friend bool    operator >  (const ChannelStatue& l, const ChannelStatue& r)  { return r < l; }
+    friend bool    operator >  (const ChannelStatue& l, const int64_t& r)  { return ChannelStatue(r) < l; }
+    friend bool    operator >  (const int64_t& l, const ChannelStatue& r)  { return r < ChannelStatue(l); }
 
-    friend bool    operator >=  (const ChannelState& l, const ChannelState& r) { return l == r || l > r; }
-    friend bool    operator >=  (const ChannelState& l, const int64_t& r) { return l >= ChannelState(r); }
-    friend bool    operator >=  (const int64_t& l, const ChannelState& r) { return ChannelState(l) >= r; }
-    friend bool    operator <=  (const ChannelState& l, const ChannelState& r) { return l == r || l < r; }
-    friend bool    operator <=  (const ChannelState& l, const int64_t& r) { return l <= ChannelState(r); }
-    friend bool    operator <=  (const int64_t& l, const ChannelState& r) { return ChannelState(l) <= r; }
+    friend bool    operator >=  (const ChannelStatue& l, const ChannelStatue& r) { return l == r || l > r; }
+    friend bool    operator >=  (const ChannelStatue& l, const int64_t& r) { return l >= ChannelStatue(r); }
+    friend bool    operator >=  (const int64_t& l, const ChannelStatue& r) { return ChannelStatue(l) >= r; }
+    friend bool    operator <=  (const ChannelStatue& l, const ChannelStatue& r) { return l == r || l < r; }
+    friend bool    operator <=  (const ChannelStatue& l, const int64_t& r) { return l <= ChannelStatue(r); }
+    friend bool    operator <=  (const int64_t& l, const ChannelStatue& r) { return ChannelStatue(l) <= r; }
 
     inline bool is_nonzero() { return high != 0 || low != 0; }
     inline int get_bit(int pos);
@@ -113,7 +113,7 @@ struct Edge {
     int count_channel_used = 0;
     vector<int> channel2operation;           // channel2operation[i] = j, j = -1 表示 通道i 未使用, 否则表示 通道i 被 业务j 使用
     vector<int> channel2path;                // channel2operation[i] = j, j = -1 表示 通道i 未使用, 否则表示 通道i 被 路径j 使用
-    ChannelState channel_state = ChannelState(0, 0);                  // 状态压缩, 使用 channel_statue 表示
+    ChannelStatue channel_statue = ChannelStatue(0, 0);                  // 状态压缩, 使用 channel_statue 表示
     Edge() {}
     Edge(int d, int _n0, int _n1): distance(d), nid0(_n0), nid1(_n1) {}
 };
@@ -155,7 +155,7 @@ int num_of_operations;
 int num_of_paths;                                                       // 最大业务数量
 int num_of_channels;                                                    // 最大通道号
 int distance_attenuation_max;                                           // 最大衰减距离
-ChannelState channel_statue_empty = 0;                                       // 通道完全未使用的边的通道状态信息
+ChannelStatue channel_statue_empty = 0;                                 // 通道完全未使用的边的通道状态信息
 std::chrono::steady_clock::time_point time_begin;                       // 记录程序开始的时刻
 vector<Node> nodes;                                                     // num_of_nodes 是节点个数, ID 从[0, num_of_nodes-1]
 vector<Edge> edges;                                                     // edges.size() 是边个数, ID 从[0, edges.size()-1]
@@ -163,6 +163,7 @@ vector<Operation> operations;                                           // num_o
 vector<Path> paths;                                                     // num_of_paths 是路径个数, ID 从[0, num_of_paths-1]
 unordered_map<int, unordered_map<int, int>> dists_min;                  // 记录两个节点之间直接连接的最短距离: 新生成的边的长度
 unordered_map<int, unordered_map<int, vector<int>>> paths_of_nodes;     // 以节点序列记录两个节点之间的路径
+vector<int> count_of_channel_used;                                      // 记录每个通道的使用次数
 
 /****************************************************以下是函数声明******************************************************/ 
 vector<int> bfs_find_path_nodes(int nid_source, int nid_target, int channel_id, unordered_set<int>& baned_edges);   // 返回源点与目标点之间的节点路径(channel_id 为 -1 时不考虑通道占用情况)
@@ -172,8 +173,8 @@ pair<int, vector<int>> find_cheapest_path_nodes(int nid_source,
                                                 int cost_cheapest,
                                                 unordered_set<int>& baned_edges);
 
-pair<ChannelState, vector<int>> bfs_find_path_nodes_state_compression(int nid_source, int nid_target, unordered_set<int>& baned_edges);
-ChannelState bfs_find_channel_id_unoccupied(int nid_source, int nid_target, unordered_set<int>& baned_edges);// 在不加边的情况下, 找出满足要求的通道状态
+pair<ChannelStatue, vector<int>> bfs_find_path_nodes_state_compression(int nid_source, int nid_target, unordered_set<int>& baned_edges);
+ChannelStatue bfs_find_channel_id_unoccupied(int nid_source, int nid_target, unordered_set<int>& baned_edges);// 在不加边的情况下, 找出满足要求的通道状态
 
 int add_edge(int nid0, int nid1);                        // 新增两个节点之间的边
 int get_eid_channel_id_ok(int nid0, int nid1, int channel_id, unordered_set<int>& baned_edges);
@@ -184,11 +185,13 @@ void optimization_select_shortest_edge() {};             // 在保证有解的�
 void optimization_transfer_operation() {};               // 将使用率低的边的业务转移至其它边从而移除使用率低的边(因赛题修改, 此处待重新实现)
 void optimization_path_rebuild();
 bool pave();                                             // 铺设线路
+
 void print_map();
+void print_channel_used_total();
 void print_info(stringstream& scout);
 
-void path_edges_release(Path& ph);                       // 更新边的占用信息, 占用边
 void path_edges_occupy(Path& ph);                        // 更新边的占用信息, 释放边
+void path_edges_release(Path& ph);                       // 更新边的占用信息, 占用边
 
 static inline bool timeout() {                           // 记录从程序起始到现在过去了多少时间
     using namespace std::chrono;
@@ -207,6 +210,7 @@ void init_data() {
     edges.resize(num_of_edges_initial);
     operations.resize(num_of_operations);
     paths.resize(num_of_paths);
+    count_of_channel_used = vector<int>(num_of_channels, 0);
 
     // 把可用的通道编号位置为 1
     for (int i = 0; i < num_of_channels; ++i) {
@@ -228,7 +232,7 @@ void init_data() {
         edges[i].id = i;
         edges[i].channel2operation = vector<int>(num_of_channels, -1);
         edges[i].channel2path = vector<int>(num_of_channels, -1);
-        edges[i].channel_state = channel_statue_empty;
+        edges[i].channel_statue = channel_statue_empty;
         nodes[edges[i].nid0].eids.push_back(edges[i].id);
         nodes[edges[i].nid1].eids.push_back(edges[i].id);
         // 记录节点边的最短距离
@@ -249,7 +253,6 @@ void init_data() {
     for (int i = 0; i < num_of_operations; ++i) {   // 读入 num_of_operations 行业务
         cin >> operations[i].nid0 >> operations[i].nid1 >> operations[i].n_paths;
         operations[i].id = i;
-        // 初始化每条业务的路径，路径总数是确定的
         for (int j = 0; j < operations[i].n_paths; ++j) {
             operations[i].paths.push_back(path_id);
             paths[path_id].id = path_id;
@@ -259,8 +262,9 @@ void init_data() {
             ++path_id;
         }
     }
-
+#ifdef TEST_HDU01
     print_map();
+#endif
 }
 
 /**
@@ -276,8 +280,10 @@ void handle_data() {
     auto edges_backup = edges;
     auto operations_backup = operations;
     auto paths_backup = paths;
+    auto count_channel_used_backup = count_of_channel_used;
     auto paths_best = paths;
     auto edges_best = edges;
+    auto count_channel_used_best = count_of_channel_used;
     int edges_new_smallest = INF;
 
     while (true) {
@@ -286,6 +292,7 @@ void handle_data() {
         edges = edges_backup;
         operations = operations_backup;
         paths = paths_backup;
+        count_of_channel_used = count_channel_used_backup;
 
         sort_data();// 对业务进行排序
 
@@ -299,6 +306,7 @@ void handle_data() {
             edges_new_smallest = edges_new;
             paths_best = paths;
             edges_best = edges;
+            count_channel_used_best = count_of_channel_used;
         }
         // 程序达到设定运行时间，退出
         if (timeout()) {
@@ -313,6 +321,11 @@ void handle_data() {
 
     // 得到最优解后，在路径中央对放大器进行放置
     place_amplifier_in_path();
+
+#ifdef TEST_HDU01
+    print_channel_used_total();     // 打印通道使用
+#endif
+
 }
 
 // 输出数据处理完的结果
@@ -379,10 +392,10 @@ void print_map() {
 
 //    scout << "边状态压缩数据(重载<<=): ";
 //    for (int cid = 128 - 1; cid >= 0; --cid) {
-//        ChannelState tmp = 1;
+//        ChannelStatue tmp = 1;
 //        tmp <<= uint(cid);
-//        ChannelState statue = channel_statue_empty & tmp;
-//        if (statue != ChannelState(0)) {
+//        ChannelStatue statue = channel_statue_empty & tmp;
+//        if (statue != ChannelStatue(0)) {
 //            scout << "1";
 //        } else {
 //            scout << "0";
@@ -395,6 +408,17 @@ void print_map() {
         if (cid != 0 && cid % 4 == 0) scout << "-";
     }
     scout << "\n";
+    // 执行输出
+    print_info(scout);
+}
+
+void print_channel_used_total() {
+    scout << "每个通道的使用次数: ";
+    for (int i = 0; i < num_of_channels; ++i) {
+        scout << count_of_channel_used[i];
+        if (i + 1 != num_of_channels) cout << ",";
+        else scout << ".\n";
+    }
     // 执行输出
     print_info(scout);
 }
@@ -426,6 +450,7 @@ void sort_data() {
     random_device rd;
     mt19937 g(rd());
 
+    // TODO: 尝试两种shuffle, 一是2硬约束业务与普通业务 一起打乱; 二是找到分界线, 将2硬约束业务与普通业务 分别打乱
     sort(operations.begin(), operations.end(), [&](Operation& op1, Operation& op2) {
         if (op2.n_paths == 2) return false;
         if (op1.n_paths == 2) return true;
@@ -460,8 +485,8 @@ vector<int> bfs_find_path_nodes(int nid_source, int nid_target, int channel_id, 
     // 当能不添加新边, 能通过当前通道连接这两个节点时, 返回经过的节点序列(从源点到目标点)
     // 否则返回一个空序列
     // channel_id == -1 表示不考虑通道编号
-    unordered_map<int, int> prev;           // 查找前缀序列，存储得是 node的 ID
-    unordered_set<int> visited_edges;       // 防止重复遍历同一条边，存储的是边的 ID
+    unordered_map<int, int> prev;
+    unordered_set<int> visited_edges;// 防止重复遍历同一条边
     queue<int> que;
     que.push(nid_source);
     prev[nid_source] = -1;
@@ -470,7 +495,7 @@ vector<int> bfs_find_path_nodes(int nid_source, int nid_target, int channel_id, 
         que.pop();
         for (auto& eid : nodes[nid].eids) {
             auto& edge = edges[eid];
-            if (baned_edges.count(eid) || visited_edges.count(eid)) continue;// 已被本业务其它路径使用,减枝
+            if (baned_edges.count(eid) || visited_edges.count(eid)) continue;// 已被本业务其它路径使用
             visited_edges.insert(eid);
             if (channel_id != -1 && edge.channel2operation[channel_id] != -1) continue;// 考虑通道使用情况
             int nid_next = edge.nid0 + edge.nid1 - nid;
@@ -498,13 +523,13 @@ vector<int> bfs_find_path_nodes(int nid_source, int nid_target, int channel_id, 
     return path_nodes;
 }
 
-pair<ChannelState, vector<int>> bfs_find_path_nodes_state_compression(int nid_source, int nid_target, unordered_set<int>& baned_edges) {
+pair<ChannelStatue, vector<int>> bfs_find_path_nodes_state_compression(int nid_source, int nid_target, unordered_set<int>& baned_edges) {
 
     unordered_map<int, int> prev;
-    queue<pair<int, ChannelState>> que;// get<0> 是节点ID, get<1> 是当前能通过的通道编号
+    queue<pair<int, ChannelStatue>> que;// get<0> 是节点ID, get<1> 是当前能通过的通道编号
     que.push(make_pair(nid_source, channel_statue_empty));// 初始设置为所有通道均可用
 
-    ChannelState result_state(0);// 路径可用的通道编号
+    ChannelStatue result_state(0);// 路径可用的通道编号
     vector<int> path_nodes;// 路径对应的节点序列
 
     while (!que.empty()) {
@@ -516,7 +541,7 @@ pair<ChannelState, vector<int>> bfs_find_path_nodes_state_compression(int nid_so
         }
         for (auto& eid : nodes[nid].eids) {
             if (baned_edges.count(eid)) continue;
-            ChannelState state_next = state & edges[eid].channel_state;
+            ChannelStatue state_next = state & edges[eid].channel_statue;
             if (state_next.low != 0 || state_next.high != 0) {
                 // TODO: 如何记忆化? 如何记录前驱节点?
 
@@ -526,7 +551,7 @@ pair<ChannelState, vector<int>> bfs_find_path_nodes_state_compression(int nid_so
     }
 
     if (!prev.count(nid_target)) {
-        return make_pair(ChannelState(0), path_nodes);
+        return make_pair(ChannelStatue(0), path_nodes);
     }
 
     int nid = nid_target;
@@ -540,16 +565,16 @@ pair<ChannelState, vector<int>> bfs_find_path_nodes_state_compression(int nid_so
     return make_pair(result_state, path_nodes);
 }
 
-ChannelState bfs_find_channel_id_unoccupied(int nid_source, int nid_target, unordered_set<int>& baned_edges) {
+ChannelStatue bfs_find_channel_id_unoccupied(int nid_source, int nid_target, unordered_set<int>& baned_edges) {
 
     // 在不加边的情况下, 找出满足要求的状态通道
     // 返回 0: 表示无可用的通道编号
     // 否则, 返回可用的通道编号
 
-    queue<pair<int, ChannelState>> que;// get<0> 是节点ID, get<1> 是当前能通过的通道编号
+    queue<pair<int, ChannelStatue>> que;// get<0> 是节点ID, get<1> 是当前能通过的通道编号
     que.push(make_pair(nid_source, channel_statue_empty));// 初始设置为所有通道均可用
     unordered_set<int> visited_edges;
-    vector<ChannelState> state_of_nodes(num_of_nodes, channel_statue_empty);// 记录节点的通道进入状态, 保证每个通道只会进入节点一次
+    vector<ChannelStatue> state_of_nodes(num_of_nodes, channel_statue_empty);// 记录节点的通道进入状态, 保证每个通道只会进入节点一次
     while (!que.empty()) {
         auto [nid, state] = que.front();
         que.pop();
@@ -560,7 +585,7 @@ ChannelState bfs_find_channel_id_unoccupied(int nid_source, int nid_target, unor
             if (baned_edges.count(eid) || visited_edges.count(eid)) continue;
             visited_edges.insert(eid);
             int nid_next = edges[eid].nid0 + edges[eid].nid1 - nid;
-            ChannelState state_next = state & edges[eid].channel_state & state_of_nodes[nid_next];
+            ChannelStatue state_next = state & edges[eid].channel_statue & state_of_nodes[nid_next];
             if (state_next.is_nonzero()) {
                 // 更新节点 nid_next 的通道入度状态信息
                 // 因为 state_of_nodes[nid_next] 在 state_next 上的1位置上均为1, 所以此举相当于将这些位置为0
@@ -645,7 +670,7 @@ int add_edge(int nid0, int nid1) {
     edge.nid1 = nid1;
     edge.channel2operation = vector<int>(num_of_channels, -1);
     edge.channel2path = vector<int>(num_of_channels, -1);
-    edge.channel_state = channel_statue_empty;
+    edge.channel_statue = channel_statue_empty;
     edge.distance = dists_min[edge.nid0][edge.nid1];
     nodes[edge.nid0].eids.push_back(edge.id);
     nodes[edge.nid1].eids.push_back(edge.id);
@@ -677,6 +702,7 @@ void path_edges_occupy(Path& ph) {
     const int& path_channel_id = ph.channel_id;
     const auto& path_edges = ph.edges;
     const auto& path_nodes = ph.nodes;
+    count_of_channel_used[path_channel_id] += path_edges.size();
 
 #ifdef TEST_HDU01
     if (path_edges.empty()) {
@@ -694,13 +720,13 @@ void path_edges_occupy(Path& ph) {
         if (edge.channel2path[path_channel_id] != -1) {
             cerr << "Error: Reusing the same channel.(path)\n";
         }
-        if (edge.channel_state.get_bit(path_channel_id) != 1) {
+        if (edge.channel_statue.get_bit(path_channel_id) != 1) {
             cerr << "Error: Reusing the same channel.(state)\n";
         }
 #endif
         edge.channel2operation[path_channel_id] = op.id;
         edge.channel2path[path_channel_id] = ph.id;
-        edge.channel_state.set_bit_zero(path_channel_id);
+        edge.channel_statue.set_bit_zero(path_channel_id);
         ++edge.count_channel_used;
     }
 
@@ -726,6 +752,7 @@ void path_edges_release(Path& ph) {
     const int& path_channel_id = ph.channel_id;
     const auto& path_edges = ph.edges;
     const auto& path_nodes = ph.nodes;
+    count_of_channel_used[path_channel_id] -= path_edges.size();
 
     for (auto& eid : path_edges) {
         auto& edge = edges[eid];
@@ -736,13 +763,13 @@ void path_edges_release(Path& ph) {
         if (edge.channel2path[path_channel_id] == -1) {
             cerr << "Error: Release an empty edge.(path)\n";
         }
-        if (edge.channel_state.get_bit(path_channel_id) != 0) {
+        if (edge.channel_statue.get_bit(path_channel_id) != 0) {
             cerr << "Error: Release an empty edge.(state)\n";
         }
 #endif
         edge.channel2operation[path_channel_id] = -1;
         edge.channel2path[path_channel_id] = -1;
-        edge.channel_state.set_bit_one(path_channel_id);
+        edge.channel_statue.set_bit_one(path_channel_id);
         --edge.count_channel_used;
     }
 
@@ -751,14 +778,13 @@ void path_edges_release(Path& ph) {
 bool pave() {
 
     for (auto& op : operations) {
-        // 对业务的每一条路径进行铺路
         for (int i = 0; i < op.paths.size(); ++i) {
             auto& path = paths[op.paths[i]];
             int nid_source = path.nid0, nid_target = path.nid1;
             int path_channel_id = -1;
             vector<int> path_nodes;
             vector<int> path_edges;
-            if (i == 1 && op.paths.size() == 2) {   // 路径数等于2，强约束: 这条路径必须得与前一条路径使用的通道相同
+            if (i == 1 && op.paths.size() == 2) {   // 硬约束: 这条路径必须得与前一条路径使用的通道相同
                 if (op.cid2pid.empty()) {           // 严重错误!!!
                     cerr << "Error: op.channel_id empty!\n";
                     return false;
@@ -781,9 +807,10 @@ bool pave() {
                     path_nodes = path_nodes_tmp;
                 }
 
-            } 
-            else {  // 业务的路径数不等于2，路径可以使用不同的通道号。
-                ChannelState channel_id_unoccupied = bfs_find_channel_id_unoccupied(nid_source, nid_target, op.edges_used);
+            }
+            else {
+
+                ChannelStatue channel_id_unoccupied = bfs_find_channel_id_unoccupied(nid_source, nid_target, op.edges_used);
                 if (channel_id_unoccupied.is_nonzero()) {
 #ifdef TEST_HDU01
                     scout << "找到了可用线路(状态压缩)\n";
@@ -806,7 +833,7 @@ bool pave() {
                     print_info(scout);
 #endif
                     unordered_set<int> baned_edges_emtpy;
-                    path_nodes = bfs_find_path_nodes(nid_source, nid_target, -1, baned_edges_emtpy);    // 找一个最短路
+                    path_nodes = bfs_find_path_nodes(nid_source, nid_target, -1, baned_edges_emtpy);
                     // 得到一个基础解, 用于剪枝
                     path_channel_id = rand() % num_of_channels;
                     int cost_cheapest = 0;
@@ -818,7 +845,20 @@ bool pave() {
                         }
                     }
                     // 随机一个通道编号, 求这个通道编号的最优路线
+                    // TODO: 基于整个图边通道的使用情况, 选择通道使用最少的那个通道编号
                     int cid = rand() % num_of_channels;
+                    for (int i = 0; i < num_of_channels; ++i) {
+                        if (count_of_channel_used[i] < count_of_channel_used[cid]) {
+                            cid = i;
+                        }
+                    }
+//#ifdef TEST_HDU01
+//                    for (int i = 0; i < num_of_channels; ++i) {
+//                        cout << count_of_channel_used[i];
+//                        if (i + 1 != num_of_channels) cout << ",";
+//                        else cout << ".";
+//                    }
+//#endif
                     auto pair_cost_nodes = find_cheapest_path_nodes(nid_source, nid_target, cid, cost_cheapest, op.edges_used);
                     auto cost_tmp = get<0>(pair_cost_nodes);
                     auto path_nodes_tmp = get<1>(pair_cost_nodes);
@@ -857,7 +897,6 @@ bool pave() {
 //                    path_channel_id = cid;
 //                }
 
-
             // 用于快速提交解决方案, 得到一个初始解
 //            unordered_set<int> baned_edges_emtpy;
 //            path_nodes = bfs_find_path_nodes(nid_source, nid_target, -1, baned_edges_emtpy);
@@ -866,6 +905,7 @@ bool pave() {
 //            } else {
 //                path_channel_id = rand() % num_of_channels;
 //            }
+
 
             // 针对通道被占用的边, 新建边来满足业务需求
             for (int i = 1; i < path_nodes.size(); ++i) {
@@ -883,7 +923,7 @@ bool pave() {
             path.nodes = path_nodes;
             path.edges = path_edges;
 
-            // 更新路径的占用信息
+            // 更新占用信息
             path_edges_occupy(path);
             op.edges_used.insert(path_edges.begin(), path_edges.end());
             op.cid2pid[path_channel_id].insert(path.id);
@@ -997,7 +1037,7 @@ void place_amplifier_in_path() {
     // optimization_select_shortest_edge();
 }
 
-inline int ChannelState::get_bit(int pos) {
+inline int ChannelStatue::get_bit(int pos) {
     int res;
     if (pos < 64) {
         res = ((this->low >> pos) & 1);
@@ -1007,7 +1047,7 @@ inline int ChannelState::get_bit(int pos) {
     return res;
 }
 
-inline bool ChannelState::set_bit_one(int pos) {
+inline bool ChannelStatue::set_bit_one(int pos) {
     if (this->get_bit(pos) == 1) return false;// 防止出现错误
     if (pos < 64) {
         this->low += (uint64_t(1) << pos);
@@ -1017,7 +1057,7 @@ inline bool ChannelState::set_bit_one(int pos) {
     return true;
 }
 
-inline bool ChannelState::set_bit_zero(int pos) {
+inline bool ChannelStatue::set_bit_zero(int pos) {
     if (this->get_bit(pos) == 0) return false;// 防止出现错误
     if (pos < 64) {
         this->low -= (uint64_t(1) << pos);
